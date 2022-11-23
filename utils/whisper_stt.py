@@ -10,7 +10,7 @@ class Transcriber():
     """ 
     Helper Class which processes audio into a single utterance and returns the transcription
     """
-    def __init__(self, rms_increase: float = .3, stop_threshold: int = 1, model_size: str="medium") -> None:
+    def __init__(self, rms_increase: float = .3, stop_threshold: int = 2, model_size: str="medium") -> None:
         self.rms_increase = rms_increase
         self.stop_threshold = stop_threshold
         self.segment_ended = False

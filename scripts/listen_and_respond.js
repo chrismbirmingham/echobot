@@ -26,7 +26,7 @@ function do_tts(e) {
         q('#message').textContent = 'Synthesizing...'
         q('#speak-button').disabled = true
         q('#audio').hidden = true
-        synthesize(text, speaker_id, style_wav)
+        respond_to(text, speaker_id, style_wav)
     }
     e.preventDefault()
     return false
@@ -44,7 +44,7 @@ q('#text').addEventListener('keyup', function (e) {
     }
 })
 
-function synthesize(text, speaker_id = "", style_wav = "") {
+function respond_to(text, speaker_id = "", style_wav = "") {
     document.getElementById('onoff').value = "Click to Listen"
     fetch(`/api/tts?text=${encodeURIComponent(text)}&speaker_id=${encodeURIComponent(speaker_id)}&style_wav=${encodeURIComponent(style_wav)}`, { cache: 'no-cache' })
         .then(function (res) {
@@ -88,16 +88,16 @@ navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         const received = message.data
         if (received) {
             console.log(received)
-            document.querySelector('#transcript').textContent += ' ' + received
+            document.querySelector('#transcript').innerHTML += ' <br>' + received
             const speaker_id = getTextValue('#speaker_id')
             const style_wav = getTextValue('#style_wav')
-            synthesize(received, speaker_id, style_wav)
+            respond_to(received, speaker_id, style_wav)
         }
-}
+    }
 
-socket.onclose = () => {
-    console.log({ event: 'onclose' })
-}
+    socket.onclose = () => {
+        console.log({ event: 'onclose' })
+    }
 
     socket.onerror = (error) => {
         console.log({ event: 'onerror', error })
