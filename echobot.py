@@ -14,6 +14,7 @@ tts = Speak()
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/scripts", StaticFiles(directory="scripts"), name="scripts")
 
 templates = Jinja2Templates(directory="templates")
 

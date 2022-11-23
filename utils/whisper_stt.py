@@ -10,7 +10,7 @@ class Transcriber():
     """ 
     Helper Class which processes audio into a single utterance and returns the transcription
     """
-    def __init__(self, rms_increase: float = .3, stop_threshold: int = 1) -> None:
+    def __init__(self, rms_increase: float = .3, stop_threshold: int = 1, model_size: str="medium") -> None:
         self.rms_increase = rms_increase
         self.stop_threshold = stop_threshold
         self.segment_ended = False
@@ -19,7 +19,7 @@ class Transcriber():
         self.data_collector = b''
         self.save_path = os.path.join(tempfile.mkdtemp(), "temp.wav")
 
-        self.audio_model = whisper.load_model("large")
+        self.audio_model = whisper.load_model(model_size)
 
     def _process_bytes(self, data):
 
