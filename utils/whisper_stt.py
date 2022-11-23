@@ -6,7 +6,7 @@ from pydub import AudioSegment
 
 
 
-class STT():
+class Transcriber():
     """ 
     Helper Class which processes audio into a single utterance and returns the transcription
     """
