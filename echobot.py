@@ -1,39 +1,27 @@
-#!flask/bin/python
-import argparse
-import io, os, sys, tempfile
-
-from pathlib import Path
-from typing import Union
-
 from fastapi import FastAPI, Request, WebSocket
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-
 from dotenv import load_dotenv
-from pydub import AudioSegment
-import json
-import asyncio
-import logging
+import os, io, sys
+import tempfile
 import whisper
-
-# from TTS.config import load_config
+from pydub import AudioSegment
+from TTS.config import load_config
 from TTS.utils.manage import ModelManager
 from TTS.utils.synthesizer import Synthesizer
+import argparse
+from pathlib import Path
+from threading import Lock
+from typing import Union
 
 
-
-
-load_dotenv()
-logger = logging.getLogger()
-
-
-audio_model = whisper.load_model("large")
 temp_dir = tempfile.mkdtemp()
 save_path = os.path.join(temp_dir, "temp.wav")
 
+load_dotenv()
 
-
+#############################################
 def create_argparser():
     def convert_boolean(x):
         return x.lower() in ["true", "1", "yes"]
@@ -89,7 +77,11 @@ if args.list_models:
     sys.exit()
 
 # update in-use models to the specified released models.
-model_path, config_path, speakers_file_path, vocoder_path, vocoder_config_path = None, None, None, None, None
+model_path = None
+config_path = None
+speakers_file_path = None
+vocoder_path = None
+vocoder_config_path = None
 
 # CASE1: list pre-trained TTS models
 if args.list_models:
@@ -135,13 +127,6 @@ speaker_manager = getattr(synthesizer.tts_model, "speaker_manager", None)
 # TODO: set this from SpeakerManager
 use_gst = synthesizer.tts_config.get("use_gst", False)
 
-
-app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-templates = Jinja2Templates(directory="templates")
-templates.env.autoescape = False
-
 def style_wav_uri_to_dict(style_wav: str) -> Union[str, dict]:
     """Transform an uri style_wav, in either a string (path to wav file to be use for style transfer)
     or a dict (gst tokens/values to be use for styling)
@@ -160,26 +145,25 @@ def style_wav_uri_to_dict(style_wav: str) -> Union[str, dict]:
         return style_wav  # style_wav is a gst dictionary with {token1_id : token1_weigth, ...}
     return None
 
+#############################################
+#############################################
+#############################################
+
+
+
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+templates = Jinja2Templates(directory="templates")
+audio_model = whisper.load_model("large")
 
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request):
-    return templates.TemplateResponse("index.html", {
+def get(request: Request):
+    return templates.TemplateResponse("echobot_index.html", {
         "request": request, 
         "use_multi_speaker":use_multi_speaker,
         "speaker_ids":speaker_manager.name_to_id if speaker_manager is not None else None,
     })
-
-
-
-@app.get("/api/tts")
-async def tts(request: Request, text: str, speaker_id: str = "", style_wav: str = ""):
-    style_wav = style_wav_uri_to_dict(style_wav)
-    print(" > Model input: {}".format(text))
-    print(" > Speaker Idx: {}".format(speaker_id))
-    wavs = synthesizer.tts(text, speaker_name=speaker_id, style_wav=style_wav)
-    out = io.BytesIO()
-    synthesizer.save_wav(wavs, out)
-    return StreamingResponse(out, media_type="audio/wav")
 
 
 @app.websocket("/listen")
@@ -249,6 +233,15 @@ async def websocket_endpoint(websocket: WebSocket):
     finally:
         await websocket.close()
 
+@app.get("/api/tts")
+def tts(text: str, speaker_id: str = "", style_wav: str = ""):
+    style_wav = style_wav_uri_to_dict(style_wav)
+    print(" > Model input: {}".format(text))
+    print(" > Speaker Idx: {}".format(speaker_id))
+    wavs = synthesizer.tts(text, speaker_name=speaker_id, style_wav=style_wav)
+    out = io.BytesIO()
+    synthesizer.save_wav(wavs, out)
+    return StreamingResponse(out, media_type="audio/wav")
 
 
 def main():
